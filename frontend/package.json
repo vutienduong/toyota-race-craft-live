@@ -4,7 +4,8 @@
   "private": true,
   "description": "RaceCraft Live - Real-time race strategy dashboard for GR Cup",
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev --turbo=false",
+    "dev:turbo": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "next lint"
