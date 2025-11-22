@@ -49,3 +49,4 @@ coverage/
 dist/
 build/
 *.egg-info/
+data/barber
