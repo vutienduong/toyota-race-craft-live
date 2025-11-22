@@ -5,7 +5,7 @@ Extracts pace, degradation, and threat detection features
 
 import pandas as pd
 import numpy as np
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 from scipy import stats
 import logging
 
