@@ -1,18 +1,12 @@
 import type { NextConfig } from 'next'
 
 const nextConfig: NextConfig = {
-  // Disable experimental features that cause parsing issues
-  experimental: {
-    // Disable experimental type stripping - causes issues with async arrow functions
-    typedRoutes: false,
-  },
+  // Configure Turbopack (empty config to silence warnings)
+  turbopack: {},
+
   typescript: {
-    // Prevent Next.js from modifying tsconfig.json
+    // Let Next.js handle TypeScript configuration
     ignoreBuildErrors: false,
-  },
-  // Ensure webpack is used instead of experimental features
-  webpack: (config) => {
-    return config
   },
 }
 
