@@ -12,6 +12,8 @@ from utils.data_loader import BarberDataLoader
 from utils.lap_segmentation import LapSegmenter
 from utils.feature_engineering import FeatureEngineer
 from models.pace_forecaster import PaceForecaster
+from models.threat_detector import ThreatDetector
+from models.pit_optimizer import PitOptimizer
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -34,6 +36,8 @@ class RaceService:
         self.lap_segmenter = LapSegmenter()
         self.feature_engineer = FeatureEngineer()
         self.pace_forecaster = PaceForecaster()
+        self.threat_detector = ThreatDetector()
+        self.pit_optimizer = PitOptimizer()
 
         # Cache for processed data
         self.race_data_cache: Dict[str, pd.DataFrame] = {}
@@ -248,6 +252,174 @@ class RaceService:
             "primary_causes": causes,
             "stint_health": health,
             "recommended_action": "Consider pit window in next 2-3 laps" if health == "critical" else "Monitor closely"
+        }
+
+    def detect_threat(
+        self,
+        vehicle_id: str,
+        rival_id: str,
+        current_lap: int,
+        current_gap: float,
+        race: Optional[str] = None
+    ) -> Dict:
+        """
+        Detect threat from rival vehicle
+
+        Args:
+            vehicle_id: Own vehicle identifier
+            rival_id: Rival vehicle identifier
+            current_lap: Current lap number
+            current_gap: Current gap to rival (seconds)
+            race: Race identifier
+
+        Returns:
+            Dictionary with threat analysis
+        """
+        # Get features for both vehicles
+        own_features = self.get_lap_features(race, vehicle_id)
+        rival_features = self.get_lap_features(race, rival_id)
+
+        if own_features.empty or rival_features.empty:
+            logger.warning("Insufficient data for threat detection")
+            return {
+                "attack_probability": 0.0,
+                "current_gap": current_gap,
+                "gap_trend": "unknown",
+                "laps_until_threat": 999,
+                "pace_delta": 0.0,
+                "sector_advantages": [],
+                "defensive_recommendations": ["Insufficient data"],
+                "threat_level": "low",
+            }
+
+        # Use threat detector model
+        threat = self.threat_detector.analyze_threat(
+            own_laps=own_features,
+            rival_laps=rival_features,
+            current_gap=current_gap,
+            current_lap=current_lap,
+            lookback_laps=5
+        )
+
+        return threat
+
+    def optimize_pit_window(
+        self,
+        vehicle_id: str,
+        current_lap: int,
+        current_position: int,
+        total_laps: int,
+        race: Optional[str] = None
+    ) -> Dict:
+        """
+        Calculate optimal pit window
+
+        Args:
+            vehicle_id: Vehicle identifier
+            current_lap: Current lap number
+            current_position: Current position in race
+            total_laps: Total laps in race
+            race: Race identifier
+
+        Returns:
+            Dictionary with pit window optimization
+        """
+        # Get lap features
+        features_df = self.get_lap_features(race, vehicle_id)
+
+        if features_df.empty:
+            logger.warning("Insufficient data for pit optimization")
+            return {
+                "optimal_window_start": current_lap + 3,
+                "optimal_window_end": current_lap + 7,
+                "recommended_lap": current_lap + 5,
+                "confidence": 0.3,
+                "undercut_opportunity": {"gain_seconds": 0.0, "viable": False},
+                "overcut_opportunity": {"gain_seconds": 0.0, "viable": False},
+                "position_risk": "unknown",
+                "traffic_risk": "unknown",
+                "reasoning": ["Insufficient data for optimization"],
+            }
+
+        # Calculate degradation rate
+        degradation_analysis = self.analyze_degradation(vehicle_id, current_lap, race)
+        degradation_rate = degradation_analysis.get("degradation_rate", 0.05)
+
+        # Use pit optimizer model
+        pit_window = self.pit_optimizer.optimize_pit_window(
+            own_laps=features_df,
+            current_lap=current_lap,
+            current_position=current_position,
+            total_laps=total_laps,
+            rivals_data=None,  # TODO: Add rival data support
+            degradation_rate=degradation_rate
+        )
+
+        return pit_window
+
+    def get_current_pace(
+        self,
+        vehicle_id: str,
+        race: Optional[str] = None,
+        window_size: int = 5
+    ) -> Dict:
+        """
+        Get current pace metrics for a vehicle
+
+        Args:
+            vehicle_id: Vehicle identifier
+            race: Race identifier
+            window_size: Number of recent laps to average
+
+        Returns:
+            Dictionary with current pace metrics
+        """
+        features_df = self.get_lap_features(race, vehicle_id)
+
+        if features_df.empty or len(features_df) < 2:
+            return {
+                "vehicle_id": vehicle_id,
+                "current_pace": 0.0,
+                "average_pace": 0.0,
+                "best_lap": 0.0,
+                "pace_trend": "unknown",
+                "consistency": 0.0,
+            }
+
+        # Get recent laps
+        recent_laps = features_df.tail(window_size)
+
+        # Calculate metrics
+        current_pace = recent_laps['lap_time'].iloc[-1] if len(recent_laps) > 0 else 0.0
+        average_pace = recent_laps['lap_time'].mean()
+        best_lap = features_df['lap_time'].min()
+        pace_std = recent_laps['lap_time'].std()
+
+        # Determine trend
+        if len(recent_laps) >= 3:
+            first_half = recent_laps['lap_time'].iloc[:len(recent_laps)//2].mean()
+            second_half = recent_laps['lap_time'].iloc[len(recent_laps)//2:].mean()
+
+            if second_half < first_half - 0.1:
+                trend = "improving"
+            elif second_half > first_half + 0.1:
+                trend = "degrading"
+            else:
+                trend = "stable"
+        else:
+            trend = "stable"
+
+        # Consistency score (lower std = more consistent)
+        consistency = max(0.0, min(1.0, 1.0 - (pace_std / 1.0))) if pace_std else 0.9
+
+        return {
+            "vehicle_id": vehicle_id,
+            "current_pace": float(current_pace),
+            "average_pace": float(average_pace),
+            "best_lap": float(best_lap),
+            "pace_trend": trend,
+            "consistency": float(consistency),
+            "recent_laps": window_size,
         }
 
 

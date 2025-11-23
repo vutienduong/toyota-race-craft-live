@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from api import pace_forecast, pit_window, threat_detection, degradation
+from api import pace_forecast, pit_window, threat_detection, degradation, current
 import uvicorn
 
 app = FastAPI(
@@ -36,6 +36,7 @@ app.include_router(pace_forecast.router, prefix="/api/pace", tags=["Pace Forecas
 app.include_router(pit_window.router, prefix="/api/pit", tags=["Pit Strategy"])
 app.include_router(threat_detection.router, prefix="/api/threat", tags=["Threat Detection"])
 app.include_router(degradation.router, prefix="/api/degradation", tags=["Degradation Analysis"])
+app.include_router(current.router, prefix="/api/current", tags=["Current Status"])
 
 if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)

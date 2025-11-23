@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import List, Optional
+from services.race_service import get_race_service
 
 router = APIRouter()
 
@@ -30,34 +31,36 @@ async def get_pit_window(request: PitWindowRequest):
     """
     Recommend optimal pit window based on pace degradation, traffic, and strategy
     """
-    # TODO: Implement actual pit window optimization
-    # This is a placeholder implementation
+    service = get_race_service()
 
-    optimal_lap = request.current_lap + 3
+    # Get pit window optimization from ML model
+    pit_result = service.optimize_pit_window(
+        vehicle_id=request.car_id,
+        current_lap=request.current_lap,
+        current_position=request.current_position,
+        total_laps=request.total_laps,
+        race=request.session_id
+    )
 
-    windows = [
-        PitWindowRecommendation(
-            start_lap=optimal_lap - 1,
-            end_lap=optimal_lap + 1,
-            confidence=0.82,
-            expected_position_loss=0,
-            undercut_opportunity=0.32,
-            traffic_risk="low"
-        ),
-        PitWindowRecommendation(
-            start_lap=optimal_lap + 2,
-            end_lap=optimal_lap + 4,
-            confidence=0.68,
-            expected_position_loss=-2,
-            traffic_risk="medium"
-        )
-    ]
+    # Create primary window recommendation
+    primary_window = PitWindowRecommendation(
+        start_lap=pit_result.get("optimal_window_start", request.current_lap + 3),
+        end_lap=pit_result.get("optimal_window_end", request.current_lap + 7),
+        confidence=pit_result.get("confidence", 0.7),
+        expected_position_loss=0,  # Based on position risk
+        undercut_opportunity=pit_result.get("undercut_opportunity", {}).get("gain_seconds"),
+        traffic_risk=pit_result.get("traffic_risk", "medium")
+    )
+
+    # Get reasoning
+    reasoning_list = pit_result.get("reasoning", [])
+    reason = "; ".join(reasoning_list) if reasoning_list else "Optimal window based on degradation analysis"
 
     return PitWindowResponse(
         car_id=request.car_id,
-        recommended_windows=windows,
-        optimal_lap=optimal_lap,
-        reason="Optimal window for undercut opportunity with minimal traffic"
+        recommended_windows=[primary_window],
+        optimal_lap=pit_result.get("recommended_lap", request.current_lap + 5),
+        reason=reason
     )
 
 @router.post("/simulate")
