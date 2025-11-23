@@ -5,6 +5,7 @@ Race Service - Manages race data and ML model inference
 import pandas as pd
 from typing import Dict, List, Optional
 import logging
+import os
 from pathlib import Path
 
 from utils.data_loader import BarberDataLoader
@@ -21,48 +22,55 @@ class RaceService:
     Service layer for race data processing and ML inference
     """
 
-    def __init__(self, data_dir: str = "data/barber", model_dir: str = "models/trained"):
-        self.data_loader = BarberDataLoader(data_dir)
+    def __init__(self, data_dir: Optional[str] = None, model_dir: Optional[str] = None):
+        # Read configuration from environment variables
+        self.data_dir = data_dir or os.getenv("DATA_DIR", "data/barber")
+        self.model_dir = Path(model_dir or os.getenv("MODEL_PATH", "models/trained"))
+        self.default_race = os.getenv("DEFAULT_RACE", "R1")
+        self.data_mode = os.getenv("DATA_MODE", "sample").lower()
+
+        # Initialize components
+        self.data_loader = BarberDataLoader(self.data_dir)
         self.lap_segmenter = LapSegmenter()
         self.feature_engineer = FeatureEngineer()
         self.pace_forecaster = PaceForecaster()
-
-        self.model_dir = Path(model_dir)
 
         # Cache for processed data
         self.race_data_cache: Dict[str, pd.DataFrame] = {}
         self.lap_features_cache: Dict[str, pd.DataFrame] = {}
 
+        logger.info(f"RaceService initialized - DATA_MODE: {self.data_mode}, DATA_DIR: {self.data_dir}")
+
     def load_race_data(
         self,
-        race: str = "R1",
-        vehicle_id: Optional[str] = None,
-        use_sample: bool = True
+        race: Optional[str] = None,
+        vehicle_id: Optional[str] = None
     ) -> pd.DataFrame:
         """
         Load and process race telemetry data
+        Uses DATA_MODE environment variable to determine whether to use sample or real data
 
         Args:
-            race: Race identifier ("R1" or "R2")
+            race: Race identifier ("R1" or "R2"), defaults to DEFAULT_RACE from env
             vehicle_id: Specific vehicle to load
-            use_sample: If True, generate sample data (for testing without real files)
 
         Returns:
             Wide-format telemetry DataFrame
         """
-        cache_key = f"{race}_{vehicle_id or 'all'}"
+        race = race or self.default_race
+        cache_key = f"{race}_{vehicle_id or 'all'}_{self.data_mode}"
 
         if cache_key in self.race_data_cache:
+            logger.info(f"Using cached data for {cache_key}")
             return self.race_data_cache[cache_key]
 
-        if use_sample:
-            logger.info("Using sample data for testing")
-            df_long = self.data_loader.generate_sample_data(
-                num_vehicles=1 if vehicle_id else 5,
-                num_laps=20
-            )
-        else:
-            df_long = self.data_loader.load_telemetry_long(race)
+        # Use the new get_telemetry_data method which handles DATA_MODE automatically
+        df_long = self.data_loader.get_telemetry_data(
+            race=race,
+            vehicle_id=vehicle_id,
+            num_vehicles=1 if vehicle_id else 5,
+            num_laps=20
+        )
 
         if df_long.empty:
             logger.warning(f"No data loaded for {race}")
@@ -76,28 +84,28 @@ class RaceService:
 
     def get_lap_features(
         self,
-        race: str = "R1",
-        vehicle_id: str = "GR86-000-0",
-        use_sample: bool = True
+        race: Optional[str] = None,
+        vehicle_id: str = "GR86-000-0"
     ) -> pd.DataFrame:
         """
         Get engineered features for all laps
 
         Args:
-            race: Race identifier
+            race: Race identifier (defaults to DEFAULT_RACE from env)
             vehicle_id: Vehicle to analyze
-            use_sample: Use sample data if True
 
         Returns:
             DataFrame with engineered lap features
         """
-        cache_key = f"{race}_{vehicle_id}_features"
+        race = race or self.default_race
+        cache_key = f"{race}_{vehicle_id}_features_{self.data_mode}"
 
         if cache_key in self.lap_features_cache:
+            logger.info(f"Using cached features for {cache_key}")
             return self.lap_features_cache[cache_key]
 
         # Load telemetry
-        df_wide = self.load_race_data(race, vehicle_id, use_sample)
+        df_wide = self.load_race_data(race, vehicle_id)
 
         if df_wide.empty:
             return pd.DataFrame()
@@ -122,7 +130,7 @@ class RaceService:
         vehicle_id: str,
         current_lap: int,
         laps_ahead: int = 5,
-        race: str = "R1"
+        race: Optional[str] = None
     ) -> List[Dict[str, float]]:
         """
         Predict lap times for next N laps
@@ -131,13 +139,13 @@ class RaceService:
             vehicle_id: Vehicle identifier
             current_lap: Current lap number
             laps_ahead: Number of laps to predict
-            race: Race identifier
+            race: Race identifier (defaults to DEFAULT_RACE from env)
 
         Returns:
             List of predictions with lap_number, predicted_time, delta, confidence
         """
         # Get features for recent laps
-        features_df = self.get_lap_features(race, vehicle_id, use_sample=True)
+        features_df = self.get_lap_features(race, vehicle_id)
 
         if features_df.empty or len(features_df) < 5:
             logger.warning("Not enough lap data for prediction")
@@ -166,7 +174,7 @@ class RaceService:
         self,
         vehicle_id: str,
         current_lap: int,
-        race: str = "R1"
+        race: Optional[str] = None
     ) -> Dict:
         """
         Analyze tire degradation for a vehicle
@@ -174,12 +182,12 @@ class RaceService:
         Args:
             vehicle_id: Vehicle identifier
             current_lap: Current lap number
-            race: Race identifier
+            race: Race identifier (defaults to DEFAULT_RACE from env)
 
         Returns:
             Dictionary with degradation analysis
         """
-        features_df = self.get_lap_features(race, vehicle_id, use_sample=True)
+        features_df = self.get_lap_features(race, vehicle_id)
 
         if features_df.empty:
             return {}

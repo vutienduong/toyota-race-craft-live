@@ -1,11 +1,12 @@
 import type { NextConfig } from 'next'
 
 const nextConfig: NextConfig = {
-  // Set Turbopack root to silence workspace detection warning
-  experimental: {
-    turbo: {
-      root: '.',
-    },
+  // Configure Turbopack (empty config to silence warnings)
+  turbopack: {},
+
+  typescript: {
+    // Let Next.js handle TypeScript configuration
+    ignoreBuildErrors: false,
   },
 }
 

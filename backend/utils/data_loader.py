@@ -8,6 +8,7 @@ import numpy as np
 from typing import Dict, List, Optional, Tuple
 from pathlib import Path
 import logging
+import os
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -43,6 +44,40 @@ class BarberDataLoader:
 
     def __init__(self, data_dir: str = "data/barber"):
         self.data_dir = Path(data_dir)
+        self.data_mode = os.getenv("DATA_MODE", "sample").lower()
+        logger.info(f"BarberDataLoader initialized in '{self.data_mode}' mode")
+
+    def get_telemetry_data(
+        self,
+        race: str = "R1",
+        vehicle_id: Optional[str] = None,
+        num_vehicles: int = 5,
+        num_laps: int = 10
+    ) -> pd.DataFrame:
+        """
+        Get telemetry data based on DATA_MODE environment variable
+
+        Args:
+            race: Race identifier ("R1" or "R2") - used for real data mode
+            vehicle_id: Optional filter for specific vehicle
+            num_vehicles: Number of vehicles for sample data mode
+            num_laps: Number of laps for sample data mode
+
+        Returns:
+            Long-format DataFrame with telemetry data
+        """
+        if self.data_mode == "real":
+            logger.info(f"Loading real data from {self.data_dir} for race {race}")
+            df_long = self.load_telemetry_long(race=race)
+
+            if df_long.empty:
+                logger.warning("Real data not found, falling back to sample data")
+                df_long = self.generate_sample_data(num_vehicles=num_vehicles, num_laps=num_laps)
+        else:
+            logger.info(f"Generating sample data: {num_vehicles} vehicles, {num_laps} laps")
+            df_long = self.generate_sample_data(num_vehicles=num_vehicles, num_laps=num_laps)
+
+        return df_long
 
     def load_telemetry_long(
         self,

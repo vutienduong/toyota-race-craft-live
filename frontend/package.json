@@ -5,6 +5,7 @@
   "description": "RaceCraft Live - Real-time race strategy dashboard for GR Cup",
   "scripts": {
     "dev": "next dev",
+    "dev:webpack": "next dev --turbo=false",
     "build": "next build",
     "start": "next start",
     "lint": "next lint"
