@@ -22,7 +22,7 @@ import { Play, Pause, RefreshCw } from "lucide-react";
 export default function DashboardPage() {
   // Race state
   const [raceState, setRaceState] = useState<RaceState>({
-    carId: "GR86-000-0",
+    carId: "GR86-002-000",
     sessionId: "R1",
     currentLap: 12,
     currentPosition: 5,
@@ -189,7 +189,7 @@ export default function DashboardPage() {
                         lapDistance: 1200,
                       },
                       {
-                        vehicleId: "GR86-001-10",
+                        vehicleId: "GR86-004-78",
                         lat: 33.5415,
                         lon: -86.4620,
                         speed: 128,

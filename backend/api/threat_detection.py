@@ -39,7 +39,7 @@ async def detect_threats(request: ThreatDetectionRequest):
 
     # Analyze threat from nearby rival (simplified - using one rival)
     # In production, would analyze multiple rivals
-    rival_id = "GR86-001-10"  # Sample rival
+    rival_id = "GR86-004-78"  # Sample rival
     current_gap = 1.5  # Sample gap in seconds
 
     threat_result = service.detect_threat(

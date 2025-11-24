@@ -104,11 +104,14 @@ class BarberDataLoader:
         logger.info(f"Loading telemetry from {filepath}")
 
         # Load with chunking for large files (1.5GB)
+        # Parse date columns as datetime
+        date_columns = ['meta_time', 'timestamp']
+
         if sample_rows:
-            df = pd.read_csv(filepath, nrows=sample_rows)
+            df = pd.read_csv(filepath, nrows=sample_rows, parse_dates=date_columns)
             logger.info(f"Loaded {len(df)} sample rows")
         else:
-            df = pd.read_csv(filepath)
+            df = pd.read_csv(filepath, parse_dates=date_columns)
             logger.info(f"Loaded {len(df)} rows")
 
         return df
