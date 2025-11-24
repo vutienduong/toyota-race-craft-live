@@ -84,7 +84,7 @@ export function usePitWindow(raceState: RaceState) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
-  const fetchData = useCallback(async () {
+  const fetchData = useCallback(async () => {
     setLoading(true);
     setError(null);
 
@@ -116,7 +116,7 @@ export function useThreatDetection(raceState: RaceState) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
-  const fetchData = useCallback(async () {
+  const fetchData = useCallback(async () => {
     setLoading(true);
     setError(null);
 
