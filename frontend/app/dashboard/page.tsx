@@ -7,6 +7,7 @@ import { PaceForecastChart } from "@/components/dashboard/pace-forecast-chart";
 import { DegradationMonitor } from "@/components/dashboard/degradation-monitor";
 import { ThreatMonitor } from "@/components/dashboard/threat-monitor";
 import { PitWindowPanel } from "@/components/dashboard/pit-window-panel";
+import { TrackMap } from "@/components/dashboard/track-map";
 import {
   usePaceForecast,
   useDegradation,
@@ -165,6 +166,44 @@ export default function DashboardPage() {
               data={degradation.data}
               loading={degradation.loading}
             />
+          </div>
+
+          {/* Track Map */}
+          <div className="lg:col-span-2">
+            <Card>
+              <CardHeader>
+                <CardTitle>Track Map</CardTitle>
+                <CardDescription>Live vehicle positions on Barber Motorsports Park</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="h-96">
+                  <TrackMap
+                    vehicles={[
+                      {
+                        vehicleId: raceState.carId,
+                        lat: 33.5419,
+                        lon: -86.4625,
+                        speed: 125,
+                        heading: 45,
+                        position: raceState.currentPosition,
+                        lapDistance: 1200,
+                      },
+                      {
+                        vehicleId: "GR86-001-10",
+                        lat: 33.5415,
+                        lon: -86.4620,
+                        speed: 128,
+                        heading: 30,
+                        position: 4,
+                        lapDistance: 1300,
+                      },
+                    ]}
+                    focusedVehicle={raceState.carId}
+                    showRacingLine={true}
+                  />
+                </div>
+              </CardContent>
+            </Card>
           </div>
 
           {/* Threat Monitor */}
