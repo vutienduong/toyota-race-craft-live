@@ -150,7 +150,17 @@ class BarberDataLoader:
 
         # Forward-fill missing values (sensor dropouts)
         df_wide = df_wide.sort_values('meta_time')
-        df_wide[self.TELEMETRY_SIGNALS] = df_wide[self.TELEMETRY_SIGNALS].ffill()
+
+        # Only forward-fill columns that exist in the pivoted data
+        existing_signals = [col for col in self.TELEMETRY_SIGNALS if col in df_wide.columns]
+        missing_signals = [col for col in self.TELEMETRY_SIGNALS if col not in df_wide.columns]
+
+        if missing_signals:
+            logger.warning(f"Missing expected telemetry signals: {missing_signals}")
+            logger.info(f"Available columns: {df_wide.columns.tolist()}")
+
+        if existing_signals:
+            df_wide[existing_signals] = df_wide[existing_signals].ffill()
 
         logger.info(f"Pivoted to {len(df_wide)} timestamps with {df_wide.shape[1]} columns")
 
