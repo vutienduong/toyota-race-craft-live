@@ -86,6 +86,40 @@ class RaceService:
         self.race_data_cache[cache_key] = df_wide
         return df_wide
 
+    def get_available_vehicles(self, race: Optional[str] = None) -> List[Dict]:
+        """
+        Get list of all available vehicles in the race session
+
+        Args:
+            race: Race identifier (defaults to DEFAULT_RACE from env)
+
+        Returns:
+            List of dicts with vehicle_id and vehicle_number
+        """
+        race = race or self.default_race
+
+        # Load telemetry data for all vehicles
+        df_long = self.data_loader.get_telemetry_data(race=race, vehicle_id=None)
+
+        if df_long.empty:
+            logger.warning(f"No data available for race {race}")
+            return []
+
+        # Get unique vehicles
+        vehicles = df_long[['vehicle_id', 'vehicle_number']].drop_duplicates()
+        vehicles = vehicles.sort_values('vehicle_number')
+
+        vehicle_list = [
+            {
+                "vehicle_id": row['vehicle_id'],
+                "vehicle_number": int(row['vehicle_number'])
+            }
+            for _, row in vehicles.iterrows()
+        ]
+
+        logger.info(f"Found {len(vehicle_list)} vehicles in race {race}")
+        return vehicle_list
+
     def get_lap_features(
         self,
         race: Optional[str] = None,

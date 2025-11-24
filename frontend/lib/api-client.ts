@@ -95,6 +95,16 @@ class ApiClient {
     });
   }
 
+  // Vehicles
+  async getAvailableVehicles(
+    sessionId: string = "R1"
+  ): Promise<{
+    vehicles: Array<{ vehicle_id: string; vehicle_number: number; display_name: string }>;
+    session_id: string;
+  }> {
+    return this.request(`/api/vehicles/list/${sessionId}`);
+  }
+
   // Health Check
   async healthCheck(): Promise<{ status: string }> {
     return this.request<{ status: string }>("/health");

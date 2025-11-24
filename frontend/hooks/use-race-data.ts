@@ -24,6 +24,8 @@ export function usePaceForecast(raceState: RaceState, lapsAhead: number = 5) {
   const [error, setError] = useState<Error | null>(null);
 
   const fetchData = useCallback(async () => {
+    if (!raceState.carId) return;
+
     setLoading(true);
     setError(null);
 
@@ -55,6 +57,8 @@ export function useDegradation(raceState: RaceState) {
   const [error, setError] = useState<Error | null>(null);
 
   const fetchData = useCallback(async () => {
+    if (!raceState.carId) return;
+
     setLoading(true);
     setError(null);
 
@@ -85,6 +89,8 @@ export function usePitWindow(raceState: RaceState) {
   const [error, setError] = useState<Error | null>(null);
 
   const fetchData = useCallback(async () => {
+    if (!raceState.carId) return;
+
     setLoading(true);
     setError(null);
 
@@ -117,6 +123,8 @@ export function useThreatDetection(raceState: RaceState) {
   const [error, setError] = useState<Error | null>(null);
 
   const fetchData = useCallback(async () => {
+    if (!raceState.carId) return;
+
     setLoading(true);
     setError(null);
 
@@ -147,6 +155,8 @@ export function useCurrentPace(carId: string) {
   const [error, setError] = useState<Error | null>(null);
 
   const fetchData = useCallback(async () => {
+    if (!carId) return;
+
     setLoading(true);
     setError(null);
 

@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from api import pace_forecast, pit_window, threat_detection, degradation, current, websocket
+from api import pace_forecast, pit_window, threat_detection, degradation, current, websocket, vehicles
 import uvicorn
 from dotenv import load_dotenv
 
@@ -41,6 +41,7 @@ app.include_router(pit_window.router, prefix="/api/pit", tags=["Pit Strategy"])
 app.include_router(threat_detection.router, prefix="/api/threat", tags=["Threat Detection"])
 app.include_router(degradation.router, prefix="/api/degradation", tags=["Degradation Analysis"])
 app.include_router(current.router, prefix="/api/current", tags=["Current Status"])
+app.include_router(vehicles.router, prefix="/api/vehicles", tags=["Vehicles"])
 app.include_router(websocket.router, prefix="/ws", tags=["WebSocket"])
 
 if __name__ == "__main__":

@@ -1,8 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { PaceForecastChart } from "@/components/dashboard/pace-forecast-chart";
 import { DegradationMonitor } from "@/components/dashboard/degradation-monitor";
 import { ThreatMonitor } from "@/components/dashboard/threat-monitor";
@@ -17,12 +24,23 @@ import {
   useAutoRefresh,
   type RaceState,
 } from "@/hooks/use-race-data";
-import { Play, Pause, RefreshCw } from "lucide-react";
+import { apiClient } from "@/lib/api-client";
+import { Play, Pause, RefreshCw, Car } from "lucide-react";
+
+interface Vehicle {
+  vehicle_id: string;
+  vehicle_number: number;
+  display_name: string;
+}
 
 export default function DashboardPage() {
+  // Available vehicles
+  const [availableVehicles, setAvailableVehicles] = useState<Vehicle[]>([]);
+  const [loadingVehicles, setLoadingVehicles] = useState(true);
+
   // Race state
   const [raceState, setRaceState] = useState<RaceState>({
-    carId: "GR86-002-000",
+    carId: "",
     sessionId: "R1",
     currentLap: 12,
     currentPosition: 5,
@@ -30,6 +48,31 @@ export default function DashboardPage() {
   });
 
   const [autoRefreshEnabled, setAutoRefreshEnabled] = useState(true);
+
+  // Load available vehicles on mount
+  useEffect(() => {
+    const loadVehicles = async () => {
+      try {
+        setLoadingVehicles(true);
+        const response = await apiClient.getAvailableVehicles(raceState.sessionId);
+        setAvailableVehicles(response.vehicles);
+
+        // Set first vehicle as default if not already set
+        if (response.vehicles.length > 0 && !raceState.carId) {
+          setRaceState((prev) => ({
+            ...prev,
+            carId: response.vehicles[0].vehicle_id,
+          }));
+        }
+      } catch (error) {
+        console.error("Failed to load vehicles:", error);
+      } finally {
+        setLoadingVehicles(false);
+      }
+    };
+
+    loadVehicles();
+  }, [raceState.sessionId]);
 
   // Fetch data using hooks
   const paceForecast = usePaceForecast(raceState);
@@ -62,17 +105,45 @@ export default function DashboardPage() {
     }));
   };
 
+  const handleVehicleChange = (vehicleId: string) => {
+    setRaceState((prev) => ({
+      ...prev,
+      carId: vehicleId,
+    }));
+  };
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="border-b bg-card sticky top-0 z-10">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold">RaceCraft Live</h1>
-              <p className="text-sm text-muted-foreground">
-                Real-time race strategy intelligence for GR Cup
-              </p>
+            <div className="flex items-center gap-4">
+              <div>
+                <h1 className="text-3xl font-bold">RaceCraft Live</h1>
+                <p className="text-sm text-muted-foreground">
+                  Real-time race strategy intelligence for GR Cup
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <Car className="h-4 w-4 text-muted-foreground" />
+                <Select
+                  value={raceState.carId}
+                  onValueChange={handleVehicleChange}
+                  disabled={loadingVehicles}
+                >
+                  <SelectTrigger className="w-[200px]">
+                    <SelectValue placeholder="Select vehicle..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableVehicles.map((vehicle) => (
+                      <SelectItem key={vehicle.vehicle_id} value={vehicle.vehicle_id}>
+                        {vehicle.display_name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2 bg-primary/10 px-4 py-2 rounded-lg">
