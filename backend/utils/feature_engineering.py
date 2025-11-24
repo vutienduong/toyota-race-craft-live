@@ -39,6 +39,10 @@ class FeatureEngineer:
         if df.empty or len(df) < window_size:
             return df
 
+        # Convert lap_time from timedelta to seconds for numeric operations
+        if pd.api.types.is_timedelta64_dtype(df['lap_time']):
+            df['lap_time'] = df['lap_time'].dt.total_seconds()
+
         # Rolling averages (last N laps)
         df['lap_time_rolling_mean'] = df['lap_time'].rolling(window_size, min_periods=1).mean()
         df['lap_time_rolling_std'] = df['lap_time'].rolling(window_size, min_periods=1).std()
@@ -96,6 +100,10 @@ class FeatureEngineer:
 
         if df.empty or len(df) < baseline_laps:
             return df
+
+        # Convert lap_time from timedelta to seconds if needed
+        if 'lap_time' in df.columns and pd.api.types.is_timedelta64_dtype(df['lap_time']):
+            df['lap_time'] = df['lap_time'].dt.total_seconds()
 
         # Calculate baseline metrics (average of first N laps)
         baseline = df.head(baseline_laps).mean()

@@ -65,7 +65,7 @@ class RaceService:
         cache_key = f"{race}_{vehicle_id or 'all'}_{self.data_mode}"
 
         if cache_key in self.race_data_cache:
-            logger.info(f"Using cached data for {cache_key}")
+            logger.debug(f"Using cached data for {cache_key}")
             return self.race_data_cache[cache_key]
 
         # Use the new get_telemetry_data method which handles DATA_MODE automatically
@@ -139,7 +139,7 @@ class RaceService:
         cache_key = f"{race}_{vehicle_id}_features_{self.data_mode}"
 
         if cache_key in self.lap_features_cache:
-            logger.info(f"Using cached features for {cache_key}")
+            logger.debug(f"Using cached features for {cache_key}")
             return self.lap_features_cache[cache_key]
 
         # Load telemetry

@@ -38,7 +38,10 @@ export function usePaceForecast(raceState: RaceState, lapsAhead: number = 5) {
       });
       setData(response);
     } catch (err) {
-      setError(err as Error);
+      // Ignore abort errors
+      if ((err as Error).name !== 'AbortError') {
+        setError(err as Error);
+      }
     } finally {
       setLoading(false);
     }

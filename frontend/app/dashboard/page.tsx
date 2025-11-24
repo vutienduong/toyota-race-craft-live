@@ -81,14 +81,14 @@ export default function DashboardPage() {
   const threat = useThreatDetection(raceState);
   const currentPace = useCurrentPace(raceState.carId);
 
-  // Auto-refresh every 5 seconds
+  // Auto-refresh every 15 seconds (reduced from 5 to prevent request queue buildup)
   useAutoRefresh(() => {
     paceForecast.refetch();
     degradation.refetch();
     pitWindow.refetch();
     threat.refetch();
     currentPace.refetch();
-  }, 5000, autoRefreshEnabled);
+  }, 15000, autoRefreshEnabled);
 
   const handleRefreshAll = () => {
     paceForecast.refetch();
