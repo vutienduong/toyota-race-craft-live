@@ -54,6 +54,14 @@ class RaceService:
             except Exception as e:
                 logger.warning(f"Failed to preload vehicles: {e}")
 
+        # Optional: Preload full race data on startup for instant vehicle switching
+        if os.getenv("PRELOAD_RACE_DATA", "false").lower() == "true":
+            try:
+                self.load_race_data(race=self.default_race, vehicle_id=None)
+                logger.info("Preloaded full race data on startup")
+            except Exception as e:
+                logger.warning(f"Failed to preload race data: {e}")
+
     def load_race_data(
         self,
         race: Optional[str] = None,
@@ -63,6 +71,8 @@ class RaceService:
         Load and process race telemetry data
         Uses DATA_MODE environment variable to determine whether to use sample or real data
 
+        Optimized to load ALL vehicles once and cache, then filter by vehicle_id from cache
+
         Args:
             race: Race identifier ("R1" or "R2"), defaults to DEFAULT_RACE from env
             vehicle_id: Specific vehicle to load
@@ -71,29 +81,46 @@ class RaceService:
             Wide-format telemetry DataFrame
         """
         race = race or self.default_race
-        cache_key = f"{race}_{vehicle_id or 'all'}_{self.data_mode}"
 
-        if cache_key in self.race_data_cache:
-            logger.debug(f"Using cached data for {cache_key}")
-            return self.race_data_cache[cache_key]
+        # Cache key for ALL vehicles (load once, filter many times)
+        all_vehicles_cache_key = f"{race}_all_vehicles_{self.data_mode}"
 
-        # Use the new get_telemetry_data method which handles DATA_MODE automatically
-        df_long = self.data_loader.get_telemetry_data(
-            race=race,
-            vehicle_id=vehicle_id,
-            num_vehicles=1 if vehicle_id else 5,
-            num_laps=20
-        )
+        # Check if we have the full dataset cached
+        if all_vehicles_cache_key not in self.race_data_cache:
+            logger.info(f"Loading full race data for {race} (all vehicles)...")
 
-        if df_long.empty:
-            logger.warning(f"No data loaded for {race}")
-            return pd.DataFrame()
+            # Load ALL vehicles data once
+            df_long = self.data_loader.get_telemetry_data(
+                race=race,
+                vehicle_id=None,  # Load all vehicles
+                num_vehicles=20,
+                num_laps=30
+            )
 
-        # Convert to wide format
-        df_wide = self.data_loader.pivot_telemetry_wide(df_long, vehicle_id)
+            if df_long.empty:
+                logger.warning(f"No data loaded for {race}")
+                return pd.DataFrame()
 
-        self.race_data_cache[cache_key] = df_wide
-        return df_wide
+            # Convert to wide format WITHOUT filtering by vehicle
+            # This gives us all vehicles in one DataFrame
+            df_wide_all = self.data_loader.pivot_telemetry_wide(df_long, vehicle_id=None)
+
+            # Cache the full dataset
+            self.race_data_cache[all_vehicles_cache_key] = df_wide_all
+            logger.info(f"Cached full race data for {race} - {len(df_wide_all)} rows, {df_wide_all['vehicle_id'].nunique() if 'vehicle_id' in df_wide_all.columns else 0} vehicles")
+        else:
+            logger.debug(f"Using cached full race data for {race}")
+
+        # Get the full cached dataset
+        df_wide_all = self.race_data_cache[all_vehicles_cache_key]
+
+        # Filter by vehicle_id if requested (fast operation on cached data)
+        if vehicle_id and 'vehicle_id' in df_wide_all.columns:
+            df_filtered = df_wide_all[df_wide_all['vehicle_id'] == vehicle_id].copy()
+            logger.debug(f"Filtered to vehicle {vehicle_id}: {len(df_filtered)} rows")
+            return df_filtered
+
+        return df_wide_all
 
     def get_available_vehicles(self, race: Optional[str] = None) -> List[Dict]:
         """

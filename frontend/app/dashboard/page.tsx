@@ -14,7 +14,7 @@ import { PaceForecastChart } from "@/components/dashboard/pace-forecast-chart";
 import { DegradationMonitor } from "@/components/dashboard/degradation-monitor";
 import { ThreatMonitor } from "@/components/dashboard/threat-monitor";
 import { PitWindowPanel } from "@/components/dashboard/pit-window-panel";
-import { TrackMap } from "@/components/dashboard/track-map";
+// import { TrackMap } from "@/components/dashboard/track-map"; // Hidden - Mapbox not configured
 import {
   usePaceForecast,
   useDegradation,
@@ -239,8 +239,8 @@ export default function DashboardPage() {
             />
           </div>
 
-          {/* Track Map */}
-          <div className="lg:col-span-2">
+          {/* Track Map - Hidden (Mapbox not configured) */}
+          {/* <div className="lg:col-span-2">
             <Card>
               <CardHeader>
                 <CardTitle>Track Map</CardTitle>
@@ -275,7 +275,7 @@ export default function DashboardPage() {
                 </div>
               </CardContent>
             </Card>
-          </div>
+          </div> */}
 
           {/* Threat Monitor */}
           <div className="lg:col-span-2">
