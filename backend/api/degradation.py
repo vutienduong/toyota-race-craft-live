@@ -87,7 +87,7 @@ async def get_current_degradation(car_id: str):
     """
     try:
         service = get_race_service()
-        features_df = service.get_lap_features(vehicle_id=car_id, use_sample=True)
+        features_df = service.get_lap_features(vehicle_id=car_id)
 
         if features_df.empty:
             return {
