@@ -43,9 +43,17 @@ export function PaceForecastChart({ data, loading }: PaceForecastChartProps) {
     time: pred.predicted_time,
     delta: pred.delta,
     confidence: pred.confidence * 100,
-    upperBound: pred.predicted_time + (1 - pred.confidence) * 0.5,
-    lowerBound: pred.predicted_time - (1 - pred.confidence) * 0.5,
+    // Confidence bounds: wider range for lower confidence
+    upperBound: pred.predicted_time + (1 - pred.confidence) * 2,
+    lowerBound: pred.predicted_time - (1 - pred.confidence) * 2,
   }));
+
+  // Calculate Y-axis domain based on actual lap times (not confidence bounds)
+  const allTimes = chartData.map(d => d.time);
+  const minTime = Math.min(...allTimes);
+  const maxTime = Math.max(...allTimes);
+  const padding = (maxTime - minTime) * 0.1 || 1; // 10% padding or 1 second minimum
+  const yDomain = [minTime - padding, maxTime + padding];
 
   // Trend icon
   const getTrendIcon = () => {
@@ -119,8 +127,9 @@ export function PaceForecastChart({ data, loading }: PaceForecastChartProps) {
               label={{ value: "Lap Number", position: "insideBottom", offset: -5 }}
             />
             <YAxis
-              domain={["dataMin - 0.5", "dataMax + 0.5"]}
+              domain={yDomain}
               label={{ value: "Lap Time (s)", angle: -90, position: "insideLeft" }}
+              tickFormatter={(value) => value.toFixed(1)}
             />
             <Tooltip
               content={({ active, payload }) => {
@@ -150,19 +159,18 @@ export function PaceForecastChart({ data, loading }: PaceForecastChartProps) {
             <Area
               type="monotone"
               dataKey="upperBound"
-              stackId="1"
               stroke="none"
               fill="#3b82f6"
               fillOpacity={0.1}
-              name="Confidence Range"
+              name="Upper Confidence"
             />
             <Area
               type="monotone"
               dataKey="lowerBound"
-              stackId="1"
               stroke="none"
               fill="#3b82f6"
               fillOpacity={0.1}
+              name="Lower Confidence"
             />
             <Line
               type="monotone"
