@@ -116,6 +116,34 @@ class BarberDataLoader:
 
         return df
 
+    def get_vehicle_list(self, race: str = "R1") -> pd.DataFrame:
+        """
+        Efficiently load only vehicle IDs and numbers (without all telemetry data)
+
+        Args:
+            race: Race identifier ("R1" or "R2")
+
+        Returns:
+            DataFrame with vehicle_id and vehicle_number columns
+        """
+        filepath = self.data_dir / f"{race}_barber_telemetry_data.csv"
+
+        if not filepath.exists():
+            logger.warning(f"File not found: {filepath}")
+            return pd.DataFrame()
+
+        logger.info(f"Loading vehicle list from {filepath}")
+
+        # Only read vehicle columns for efficiency (much faster than loading all 11M rows)
+        df = pd.read_csv(
+            filepath,
+            usecols=['vehicle_id', 'vehicle_number'],
+            dtype={'vehicle_id': str, 'vehicle_number': int}
+        )
+
+        logger.info(f"Loaded vehicle info from {len(df)} rows")
+        return df
+
     def pivot_telemetry_wide(
         self,
         df_long: pd.DataFrame,

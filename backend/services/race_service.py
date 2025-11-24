@@ -42,8 +42,17 @@ class RaceService:
         # Cache for processed data
         self.race_data_cache: Dict[str, pd.DataFrame] = {}
         self.lap_features_cache: Dict[str, pd.DataFrame] = {}
+        self.vehicles_cache: Dict[str, List[Dict]] = {}
 
         logger.info(f"RaceService initialized - DATA_MODE: {self.data_mode}, DATA_DIR: {self.data_dir}")
+
+        # Optional: Preload vehicle list on startup to warm cache
+        if os.getenv("PRELOAD_VEHICLES", "true").lower() == "true":
+            try:
+                self.get_available_vehicles()
+                logger.info("Preloaded vehicle list on startup")
+            except Exception as e:
+                logger.warning(f"Failed to preload vehicles: {e}")
 
     def load_race_data(
         self,
@@ -98,15 +107,21 @@ class RaceService:
         """
         race = race or self.default_race
 
-        # Load telemetry data for all vehicles
-        df_long = self.data_loader.get_telemetry_data(race=race, vehicle_id=None)
+        # Check cache first
+        cache_key = f"{race}_vehicles_{self.data_mode}"
+        if hasattr(self, 'vehicles_cache') and cache_key in self.vehicles_cache:
+            logger.debug(f"Using cached vehicle list for {cache_key}")
+            return self.vehicles_cache[cache_key]
 
-        if df_long.empty:
-            logger.warning(f"No data available for race {race}")
+        # Load only vehicle columns for efficiency (not all telemetry data)
+        df_vehicles = self.data_loader.get_vehicle_list(race=race)
+
+        if df_vehicles.empty:
+            logger.warning(f"No vehicles available for race {race}")
             return []
 
         # Get unique vehicles
-        vehicles = df_long[['vehicle_id', 'vehicle_number']].drop_duplicates()
+        vehicles = df_vehicles[['vehicle_id', 'vehicle_number']].drop_duplicates()
         vehicles = vehicles.sort_values('vehicle_number')
 
         vehicle_list = [
@@ -116,6 +131,11 @@ class RaceService:
             }
             for _, row in vehicles.iterrows()
         ]
+
+        # Cache the result
+        if not hasattr(self, 'vehicles_cache'):
+            self.vehicles_cache = {}
+        self.vehicles_cache[cache_key] = vehicle_list
 
         logger.info(f"Found {len(vehicle_list)} vehicles in race {race}")
         return vehicle_list
